@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Summarizer — Dashboard</title>
+    <link rel="stylesheet" href="/static/css/app.css">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+</head>
+<body data-theme="light" class="min-h-screen">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
+        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+            <div class="flex items-center gap-2.5">
+                <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                    </svg>
+                </div>
+                <h1 class="text-lg font-bold tracking-tight" data-i18n="dashboard.title">Meeting Summarizer</h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="langToggle" class="icon-btn" title="Language"><span id="langIcon">EN</span></button>
+                <button id="themeToggle" class="icon-btn" title="Theme"><span id="themeIcon">🌙</span></button>
+                <span id="userInfo" class="hidden text-sm text-slate-500 dark:text-slate-400 sm:inline"></span>
+                <button id="ragBtn" class="btn-secondary" data-i18n="rag.open">Knowledge base</button>
+                <button id="settingsBtn" class="btn-secondary" data-i18n="settings.open">Settings</button>
+                <!-- Revealed only for administrators (see the role check in dashboard.js). -->
+                <button id="adminBtn" class="btn-secondary" style="display:none" data-i18n="admin.title">Administration</button>
+                <button id="logoutBtn" class="btn-ghost" data-i18n="dashboard.logout">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
+        <!-- Queue Status (admins) -->
+        <div id="queueStatus" class="card items-center justify-between gap-4 px-5 py-3 text-sm sm:flex" style="display: none;">
+            <div class="text-slate-600 dark:text-slate-300">
+                <span class="font-medium" data-i18n="queue.status">Queue Status:</span>
+                <span id="queueSize" class="font-semibold text-brand-600">0</span> in queue,
+                <span id="processingCount" class="font-semibold text-brand-600">0</span> processing
+                (<span id="workersCount">0</span>/<span id="maxWorkers">0</span> workers)
+            </div>
+            <label class="mt-2 flex items-center gap-2 sm:mt-0">
+                <span class="text-slate-500 dark:text-slate-400" data-i18n="queue.workers">Workers:</span>
+                <select id="workersSelect" class="field w-auto py-1">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- Upload -->
+        <section class="card p-5 sm:p-6">
+            <h2 class="section-title mb-4" data-i18n="upload.title">Upload Meeting</h2>
+            <div id="uploadArea" class="group cursor-pointer rounded-xl border-2 border-dashed border-slate-300 px-6 py-10 text-center transition hover:border-brand-500 hover:bg-brand-50/40 dark:border-slate-700 dark:hover:border-brand-500 dark:hover:bg-brand-500/5">
+                <input type="file" id="fileInput" accept="video/*,audio/*" class="hidden">
+                <div class="upload-placeholder flex flex-col items-center gap-2 text-slate-500 dark:text-slate-400">
+                    <svg class="text-slate-400 transition group-hover:text-brand-500" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <p class="font-medium text-slate-600 dark:text-slate-300" data-i18n="upload.placeholder">Click to upload or drag and drop</p>
+                    <p class="text-xs" data-i18n="upload.hint">MP4, AVI, MOV, MKV, WebM, MP3, WAV, M4A</p>
+                </div>
+                <div class="upload-progress mx-auto max-w-md" id="uploadProgress" style="display: none;">
+                    <div class="progress-track"><div class="progress-value" id="progressFill" style="width: 0%"></div></div>
+                    <p id="progressText" class="mt-2 text-sm text-slate-500 dark:text-slate-400" data-i18n="upload.uploading">Uploading...</p>
+                </div>
+            </div>
+
+            <!-- Or from a URL (YouTube / file server) -->
+            <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+                <input type="url" id="urlInput" class="field flex-1" data-i18n="upload.urlPlaceholder"
+                       placeholder="https://… (YouTube или ссылка на видео)">
+                <button id="urlAddBtn" class="btn-secondary shrink-0" data-i18n="upload.urlAdd">Add by URL</button>
+            </div>
+            <p id="urlMsg" class="mt-2 text-sm"></p>
+
+            <!-- Or record straight from the microphone (parity with the desktop recorder) -->
+            <div class="mt-4 flex flex-wrap items-center gap-3">
+                <button id="recordBtn" class="btn-secondary shrink-0" data-i18n="upload.recordStart">Record from microphone</button>
+                <span id="recordIndicator" class="hidden items-center gap-2 text-sm font-medium text-red-500">
+                    <span class="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-red-500"></span>
+                    <span id="recordElapsed">0:00</span>
+                </span>
+                <span class="text-xs text-slate-500 dark:text-slate-400" data-i18n="upload.recordHint">The recording is uploaded as a meeting when you stop it.</span>
+            </div>
+            <p id="recordMsg" class="mt-2 text-sm"></p>
+
+            <label class="mt-3 inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <input type="checkbox" id="trimBeforeProcessing">
+                <span data-i18n="trim.enable">Split the recording into separate meetings first</span>
+            </label>
+        </section>
+
+        <!-- Archive statistics (same metrics as the desktop Statistics dialog) -->
+        <section class="card p-5 sm:p-6">
+            <div class="mb-3 flex items-center justify-between gap-3">
+                <h2 class="section-title" data-i18n="stats.title">Statistics</h2>
+                <button id="statsRefresh" class="btn-secondary" data-i18n="stats.refresh">Refresh</button>
+            </div>
+            <div id="statsBody" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"></div>
+        </section>
+
+        <!-- Search across the archive (literal or semantic) -->
+        <section class="card p-5 sm:p-6">
+            <h2 class="section-title mb-4" data-i18n="search.title">Search</h2>
+            <div class="flex flex-col gap-2 sm:flex-row">
+                <input type="search" id="searchInput" class="field flex-1" data-i18n="search.placeholder"
+                       placeholder="Что искать в транскриптах">
+                <select id="searchMode" class="field sm:w-56">
+                    <option value="text" data-i18n="search.modeText">By text</option>
+                    <option value="rag" data-i18n="search.modeRag">By meaning (knowledge base)</option>
+                </select>
+                <button id="searchBtn" class="btn-secondary shrink-0" data-i18n="search.run">Search</button>
+            </div>
+            <label class="mt-2 inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                <input type="checkbox" id="searchRegex"> <span data-i18n="search.regex">Regular expression</span>
+            </label>
+            <div id="searchResults" class="mt-3 space-y-3"></div>
+        </section>
+
+        <!-- Meetings -->
+        <section class="card p-5 sm:p-6">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h2 class="section-title" data-i18n="meetings.title">Your Meetings</h2>
+                <div class="flex items-center gap-2">
+                    <select id="statusFilter" class="field w-auto py-1.5">
+                        <option value="" data-i18n="filters.all">All</option>
+                        <option value="uploaded" data-i18n="filters.uploaded">Uploaded</option>
+                        <option value="processing" data-i18n="filters.processing">Processing</option>
+                        <option value="completed" data-i18n="filters.completed">Completed</option>
+                        <option value="failed" data-i18n="filters.failed">Failed</option>
+                    <option value="cancelled" data-i18n="filters.cancelled">Cancelled</option>
+                    </select>
+                    <button id="refreshBtn" class="btn-secondary" data-i18n="filters.refresh">Refresh</button>
+                    <button id="clearFinishedBtn" class="btn-secondary" data-i18n="meetings.clearFinished">Clear finished</button>
+                </div>
+            </div>
+            <div id="meetingsList" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="col-span-full py-10 text-center text-sm text-slate-400" data-i18n="meetings.loading">Loading meetings...</div>
+            </div>
+            <div class="mt-5 flex items-center justify-center gap-4" id="pagination" style="display: none;">
+                <button id="prevPage" class="btn-secondary" data-i18n="pagination.previous">Previous</button>
+                <span id="pageInfo" class="text-sm text-slate-500 dark:text-slate-400"></span>
+                <button id="nextPage" class="btn-secondary" data-i18n="pagination.next">Next</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-10 border-t border-slate-200 py-6 dark:border-slate-800">
+        <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 text-sm text-slate-400 sm:flex-row sm:px-6">
+            <span>© 2026 Meeting Summarizer · <span data-i18n="footer.tagline">AI-powered meeting analysis</span></span>
+            <span class="flex items-center gap-3">
+                <a href="/api/docs" target="_blank" rel="noopener" class="transition hover:text-brand-600" data-i18n="footer.api">API</a>
+                <span class="text-slate-300 dark:text-slate-700">·</span>
+                <span data-i18n="footer.version">Version</span> <span data-app-version>—</span>
+            </span>
+        </div>
+    </footer>
+
+    <!-- Meeting Detail Modal -->
+    <div id="meetingModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-panel">
+            <div class="modal-header">
+                <h2 id="modalTitle" class="text-lg font-semibold" data-i18n="modal.title">Meeting Details</h2>
+                <button class="icon-btn border-0" id="closeModal" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-panel">
+            <div class="modal-header">
+                <h2 class="text-lg font-semibold" data-i18n="settings.title">Settings</h2>
+                <button class="icon-btn border-0" id="closeSettings" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body" id="settingsBody"></div>
+        </div>
+    </div>
+
+    <!-- Administration: installation-wide settings and shared resources (admin only) -->
+    <div id="adminModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-panel">
+            <div class="modal-header">
+                <h2 class="text-lg font-semibold" data-i18n="admin.title">Administration</h2>
+                <button class="icon-btn border-0" id="closeAdmin" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body" id="adminBody"></div>
+        </div>
+    </div>
+
+    <!-- Trim: split one recording into per-meeting segments -->
+    <div id="trimModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-panel">
+            <div class="modal-header">
+                <h2 class="text-lg font-semibold" data-i18n="trim.title">Choose segments to process</h2>
+                <button class="icon-btn border-0" id="trimClose" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3 text-sm text-slate-500 dark:text-slate-400" data-i18n="trim.intro">
+                    Drag across the waveform to mark a meeting, then add it. Every segment is
+                    processed separately: its own transcript, summary and analysis.
+                </p>
+                <canvas id="trimCanvas" height="150"
+                        class="w-full cursor-crosshair rounded-lg border border-slate-200 dark:border-slate-700"></canvas>
+                <div class="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                    <span id="trimSelection" class="text-slate-500 dark:text-slate-400">—</span>
+                    <button id="trimAdd" class="btn-secondary" data-i18n="trim.add">Add segment</button>
+                </div>
+                <div id="trimList" class="mt-3 space-y-2"></div>
+                <p id="trimMsg" class="mt-2 text-sm"></p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button id="trimCut" class="btn-primary" data-i18n="trim.cut">Cut and queue</button>
+                    <button id="trimWhole" class="btn-secondary" data-i18n="trim.whole">Process the whole file</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Knowledge base: what is actually indexed for RAG, and its size.
+         The desktop RAG dialog has had Library + Stats since day one; without
+         this the cabinet could add documents but never inspect or prune them. -->
+    <div id="ragModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-panel">
+            <div class="modal-header">
+                <h2 class="text-lg font-semibold" data-i18n="rag.title">Knowledge base</h2>
+                <button class="icon-btn border-0" id="ragClose" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="flex flex-wrap items-end gap-2">
+                    <label class="block flex-1">
+                        <span class="field-label" data-i18n="rag.project">Project (blank = all)</span>
+                        <input id="ragProject" class="field" type="text" placeholder="">
+                    </label>
+                    <button id="ragRefresh" class="btn-secondary" data-i18n="rag.refresh">Refresh</button>
+                </div>
+                <div id="ragStatsBox" class="mt-3 text-sm text-slate-500 dark:text-slate-400">—</div>
+                <div id="ragLibraryBox" class="mt-3 space-y-2"></div>
+                <p id="ragMsg" class="mt-2 text-sm"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

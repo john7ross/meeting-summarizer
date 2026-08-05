@@ -1,0 +1,7 @@
+{
+  "name": "meeting-summarizer",
+  "version": "1.2.1",
+  "description": "Meeting transcription, summarization and analysis - PySide6 desktop client + FastAPI web cabinet. Single source of truth for the app version (read by the exporter footer).",
+  "license": "MIT",
+  "private": true
+}

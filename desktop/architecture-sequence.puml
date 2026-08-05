@@ -1,0 +1,149 @@
+@startuml meeting-summarizer-sequence
+' One meeting through either front-end. Plain PlantUML; no network includes.
+title Meeting Summarizer - intake, queue and one processing pipeline
+
+actor User
+boundary "Front-end\n(PySide UI / FastAPI)" as FE
+participant "Recorder + Trim\n(QtMultimedia / MediaRecorder)" as CAP
+database "Authoritative state\n(HistoryStore + atomic_io / server DB)" as STATE
+control "Queue\n(PipelineQueue / ProcessingQueue)" as Q
+control "Runner\n(JobRunner / ProcessingWorker)" as RUN
+participant "url_download.py" as URL
+participant "gpu_handoff.py" as GPU
+participant "processor.py\n(engine + ffmpeg + diarization)" as PROC
+participant "ai_client.py" as AI
+participant "AI target\n(local HTTP / cloud / agent CLI)" as EP
+participant "Export adapters" as EXP
+participant "rag_catalogs.py\n(resolver + lock)" as RC
+participant "rag.py" as RAG
+database "Artifacts\n(desktop file-name dir / web meeting-id dir)" as ART
+database "RAG catalogs\n(isolated / shared)" as RSTORE
+
+group Intake
+  alt desktop local file
+    User -> FE : add file / drag and drop
+  else desktop URL
+    User -> FE : add public or trusted URL
+    FE -> URL : download(url, browser cookies setting)
+    URL --> FE : local media path or actionable error
+  else desktop microphone
+    User -> CAP : record / stop
+    CAP --> FE : 16 kHz mono WAV
+  else web microphone
+    User -> CAP : record / stop
+    CAP --> FE : MediaRecorder blob, uploaded as a meeting
+  else web upload
+    User -> FE : authenticated multipart upload
+    FE -> FE : safe basename + UUID;\nstream and enforce MAX_UPLOAD_BYTES
+  else web URL
+    User -> FE : authenticated HTTP(S) URL
+    FE -> FE : reject credentials;\nvalidate submitted host against private/local policy
+  end
+
+  opt file contains several meetings (both front-ends)
+    User -> CAP : accept whole file or mark segments
+    CAP -> CAP : accurate ffmpeg cuts
+    CAP --> FE : original file or one file per meeting
+  end
+
+  FE -> STATE : create id-owned entry
+  note right of STATE
+    Desktop: locked read-modify-write,
+    fsync, atomic JSON replacement.
+    Web: ownership-scoped SQL row.
+  end note
+end
+
+FE -> Q : enqueue(id)\ndesktop: automatic after Trim\nweb: Process command
+Q -> Q : suppress duplicate id;\nstart while active < concurrency cap
+Q -> RUN : start one id-owned pipeline
+note over Q,RUN
+  Extra meetings stay queued until a slot is free.
+  Desktop cancel(id) affects only the selected job.
+  Lowering the web cap lets busy workers finish, then retire.
+end note
+
+RUN -> STATE : status = extracting/transcribing
+RUN --> FE : status/progress(job_id, value, detail)
+FE -> FE : update per-job state map;\nselected row controls visible projection
+
+opt source is a web URL
+  RUN -> URL : download validated source
+  URL --> RUN : local media path or error
+end
+
+opt gpuHandoff enabled
+  RUN -> GPU : acquire(port)\nstop local LLM and free VRAM
+end
+
+RUN -> PROC : transcribe(video, engine, device,\ndiarizationBackend, HF token if Pyannote)
+PROC -> PROC : ffmpeg audio extraction;\nregistry-selected ASR
+alt diarization = sherpa
+  PROC -> PROC : bundled sherpa-onnx diarization
+else diarization = pyannote
+  PROC -> PROC : gated Pyannote model via Hugging Face token
+else diarization disabled
+  PROC -> PROC : transcript without speaker labels
+end
+PROC --> RUN : UTF-8 JSON-line progress
+PROC --> ART : <stem>_raw.txt
+
+opt transcript contains speaker markers
+  RUN --> FE : speakers_needed(job_id, transcript)
+  User -> FE : confirm/rename speakers or skip
+  FE --> RUN : corrected/original transcript; resume
+end
+
+opt gpuHandoff enabled
+  RUN -> GPU : release()\nrestore local LLM and wait until ready
+end
+
+RUN -> STATE : status = summarizing
+RUN -> AI : summary(prompt [+ project memory],\nfull transcript, outputLanguage)
+note right of AI
+  Whole transcript is the quality-first default.
+  Map-reduce chunking is explicit opt-in.
+end note
+AI -> EP : HTTP chat or prompt/text via stdin/files
+EP --> AI : summary text or explicit error
+AI --> ART : <stem>_summary.txt (version N)
+RUN -> STATE : persist summary version
+
+RUN -> STATE : status = analyzing
+loop each enabled analysis feature
+  RUN -> AI : feature prompt + selected source
+  note right of AI
+    Default source: full transcript.
+    Optional faster source: summary N.
+  end note
+  AI -> EP : request JSON result
+  EP --> AI : feature result or feature error
+end
+RUN --> ART : merged <stem>_analysis.json (version N)
+RUN -> STATE : persist analysis version;\nsummary provenance only when summary was the source
+
+RUN -> EXP : best-effort automatic integrations
+EXP --> ART : requested txt/md/json/html/pdf/docx
+EXP -> EXP : optional Obsidian / Google Sheets
+
+opt user explicitly adds the meeting to RAG
+  User -> FE : Add to knowledge base
+  FE -> RC : resolve(settings, desktop / user id)
+  alt isolated mode (default)
+    RC --> FE : rag_knowledge_base / rag_data/uN
+  else shared capability key
+    RC --> FE : rag_shared/sha256(key)
+  end
+  FE -> RAG : index(project, summary, transcript)
+  RAG -> RC : acquire catalog write lock
+  RAG -> RSTORE : write chunks + embedding metadata
+  RAG -> RC : release lock
+  RAG --> FE : UTF-8 JSON result
+end
+
+RUN -> STATE : status = DONE / ERROR / CANCELLED
+RUN --> FE : terminal event(job_id) + stage timings
+FE --> User : selected job's truthful status and artifacts
+Q -> Q : release slot and pump next queued id
+
+@enduml

@@ -1,0 +1,47 @@
+# Without this file the bytes in the repository depend on each contributor's
+# core.autocrlf setting, so the same commit produces different checksums on
+# different machines.
+
+# Normalise every text file in the repository to LF.
+* text=auto eol=lf
+
+# Windows launchers MUST keep CRLF: cmd.exe mis-parses an LF-only .bat, and the
+# min archive's INSTALL.bat/RUN.bat/SERVER.bat are the first thing a recipient
+# double-clicks.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# Explicit text types (keeps diffs readable, avoids autodetect surprises).
+*.py    text diff=python
+*.js    text
+*.cjs   text
+*.json  text
+*.md    text
+*.html  text
+*.css   text
+*.puml  text
+*.txt   text
+*.yml   text
+*.yaml  text
+
+# Binary: never touch these, never try to diff or convert them.
+*.png   binary
+*.jpg   binary
+*.ico   binary
+*.pdf   binary
+*.zip   binary
+*.exe   binary
+*.dll   binary
+*.onnx  binary
+*.bin   binary
+*.pt    binary
+*.gguf  binary
+*.wav   binary
+*.mp3   binary
+*.mp4   binary
+*.mkv   binary
+
+# Keep repository noise out of GitHub's language statistics and diffs.
+graphify-out/**   linguist-generated=true
+server/web/css/app.css  linguist-generated=true

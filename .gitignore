@@ -1,0 +1,148 @@
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+dist-small/
+dist-min/
+dist-full/
+
+# Python
+backend/python/
+backend/FFmpeg/
+backend/models/
+backend/__pycache__/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Whisper / Vosk models (large; bundled per build variant or fetched on demand — never in VCS)
+resources/whisper_models/
+resources/vosk_models/
+resources/sherpa_models/
+resources/whispercpp_models/
+resources/funasr_models/
+resources/sherpa_extra_models/
+
+# User data
+transcripts/
+summaries/
+config/settings.json
+config/history.json
+config/*.lock
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+.claude/
+.codex/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Build artifacts
+*.exe
+*.zip
+*.tar.gz
+
+# Environment
+.env
+.env.local
+
+# Test coverage
+coverage/
+
+# Electron builder
+builder-debug.yml
+builder-effective-config.yaml
+
+# Runtime artifacts / generated reports (kept on disk, not in VCS)
+logs/
+crash_*.json
+debug-report-*.json
+statistics-*.json
+code-coverage-*.json
+rag_index_*.json
+memory-snapshot-*.json
+tests/tmp_transcripts/
+*.mkv
+*.mp4
+*.wav
+
+# Scratch/probe files
+_probe.py
+_env_probe.txt
+_v_out.txt
+_v_err.txt
+_commitmsg.txt
+desktop/_dl*
+desktop/_pip*
+desktop/_check_*.py
+desktop/*_launch.ps1
+
+# graphify knowledge-graph output (regenerable)
+graphify-out/
+
+# PySide native client – local virtualenv / build output
+desktop/.venv/
+desktop/dist/
+desktop/build/
+resources/diarization_models/
+# Built-in local AI: llama.cpp binaries + CUDA runtime + multi-GB GGUF models,
+# all fetched on demand by backend/local_ai.py. Never belongs in the repo.
+resources/local_ai/
+
+# E2E live-test artifacts (contain real meeting data — never commit)
+tests/_e2e_out/
+tests/_e2e_ai.py
+tests/_e2e_analysis.py
+
+# --- cleanup 2026-07: legacy Electron removed; keep generated junk out ---
+/node_modules/
+/logs/
+/rag_knowledge_base/
+/debug-report-*.json
+/statistics-*.json
+/code-coverage-*.json
+/rag_index_*.json
+/meeting-summarizer-logs-*.log
+
+# server web layer
+server/.venv/
+config/server.db
+server/**/__pycache__/
+/uploads/
+/rag_data/
+/rag_shared/
+
+# Server JWT signing secret (auto-generated; never commit)
+config/.jwt_secret
+
+# cut meeting segments (regenerable)
+segments/
+
+# live microphone recordings (regenerable)
+recordings/
+
+# rendered diagram PNGs (regenerable)
+desktop/out/
+
+# release artifacts (regenerable)
+RELEASE_NOTES.md
+RELEASE_NOTES.ru.md

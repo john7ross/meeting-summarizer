@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Summarizer — Login</title>
+    <link rel="stylesheet" href="/static/css/app.css">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+</head>
+<body data-theme="light" class="min-h-screen">
+    <div class="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+        <!-- Decorative gradient backdrop -->
+        <div class="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-brand-50 via-slate-100 to-slate-200 dark:from-slate-900 dark:via-slate-950 dark:to-black"></div>
+        <div class="pointer-events-none absolute -top-32 -left-24 -z-10 h-96 w-96 rounded-full bg-brand-400/20 blur-3xl"></div>
+        <div class="pointer-events-none absolute -bottom-32 -right-24 -z-10 h-96 w-96 rounded-full bg-brand-600/20 blur-3xl"></div>
+
+        <div class="card w-full max-w-md p-8">
+            <!-- Settings bar -->
+            <div class="mb-6 flex items-center justify-end gap-2">
+                <button id="langToggle" class="icon-btn" title="Language">
+                    <span id="langIcon">EN</span>
+                </button>
+                <button id="themeToggle" class="icon-btn" title="Theme">
+                    <span id="themeIcon">🌙</span>
+                </button>
+            </div>
+
+            <div class="mb-6 text-center">
+                <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/30">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight" data-i18n="auth.title">Meeting Summarizer</h1>
+                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400" data-i18n="auth.subtitle">AI-powered meeting analysis</p>
+            </div>
+
+            <!-- Login Form -->
+            <div id="loginForm" class="auth-form">
+                <h2 class="mb-4 text-lg font-semibold" data-i18n="auth.login">Login</h2>
+                <form id="loginFormElement" class="space-y-4">
+                    <div>
+                        <label for="loginUsername" class="field-label" data-i18n="auth.username">Username</label>
+                        <input type="text" id="loginUsername" class="field" required autocomplete="username" data-i18n="auth.username" placeholder="Username">
+                    </div>
+                    <div>
+                        <label for="loginPassword" class="field-label" data-i18n="auth.password">Password</label>
+                        <input type="password" id="loginPassword" class="field" required autocomplete="current-password" data-i18n="auth.password" placeholder="Password">
+                    </div>
+                    <button type="submit" class="btn-primary w-full" data-i18n="auth.loginButton">Login</button>
+                    <p class="text-center text-sm text-slate-500 dark:text-slate-400">
+                        <span data-i18n="auth.noAccount">Don't have an account?</span>
+                        <a href="#" id="showRegister" class="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400" data-i18n="auth.register">Register</a>
+                    </p>
+                </form>
+            </div>
+
+            <!-- Register Form -->
+            <div id="registerForm" class="auth-form" style="display: none;">
+                <h2 class="mb-4 text-lg font-semibold" data-i18n="auth.register">Register</h2>
+                <form id="registerFormElement" class="space-y-4">
+                    <div>
+                        <label for="registerUsername" class="field-label" data-i18n="auth.username">Username</label>
+                        <input type="text" id="registerUsername" class="field" required minlength="3" autocomplete="username" data-i18n="auth.username" placeholder="Username">
+                    </div>
+                    <div>
+                        <label for="registerEmail" class="field-label" data-i18n="auth.email">Email</label>
+                        <input type="email" id="registerEmail" class="field" required autocomplete="email" data-i18n="auth.email" placeholder="Email">
+                    </div>
+                    <div>
+                        <label for="registerPassword" class="field-label" data-i18n="auth.password">Password</label>
+                        <input type="password" id="registerPassword" class="field" required minlength="6" autocomplete="new-password" data-i18n="auth.password" placeholder="Password">
+                    </div>
+                    <div>
+                        <label for="registerPasswordConfirm" class="field-label" data-i18n="auth.confirmPassword">Confirm Password</label>
+                        <input type="password" id="registerPasswordConfirm" class="field" required minlength="6" autocomplete="new-password" data-i18n="auth.confirmPassword" placeholder="Confirm Password">
+                    </div>
+                    <button type="submit" class="btn-primary w-full" data-i18n="auth.registerButton">Register</button>
+                    <p class="text-center text-sm text-slate-500 dark:text-slate-400">
+                        <span data-i18n="auth.hasAccount">Already have an account?</span>
+                        <a href="#" id="showLogin" class="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400" data-i18n="auth.login">Login</a>
+                    </p>
+                </form>
+            </div>
+
+            <div id="errorMessage" class="mt-4 hidden rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"></div>
+        </div>
+
+        <footer class="absolute inset-x-0 bottom-0 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
+            © 2026 Meeting Summarizer · <span data-i18n="footer.tagline">AI-powered meeting analysis</span> · v<span data-app-version>—</span>
+        </footer>
+    </div>
+
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+</body>
+</html>

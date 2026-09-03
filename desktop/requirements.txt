@@ -1,0 +1,82 @@
+# Meeting Summarizer — PySide desktop port: Python dependencies.
+#
+# These are the packages the desktop client (desktop/) and its reused backend
+# (backend/*.py, backend/processing/) actually import. Pinned to the versions
+# verified on this machine (Python 3.11, embedded runtime at backend/python).
+#
+# torch is a special case: install the CUDA 12.4 wheels from PyTorch's index
+# FIRST (CPU-only machines should use the PyTorch CPU wheel index):
+#   pip install torch==2.6.0+cu124 torchaudio==2.6.0+cu124 torchvision==0.21.0+cu124 \
+#       --index-url https://download.pytorch.org/whl/cu124
+# then: pip install -r requirements.txt
+
+# ---- UI ---------------------------------------------------------------------
+PySide6==6.11.1
+
+# ---- Torch stack (engines depend on it; installed from the cu124 index) ------
+torch==2.6.0+cu124
+torchaudio==2.6.0+cu124
+torchvision==0.21.0+cu124
+numpy<2.0                       # whisper/ctranslate2 stack requires <2.0
+
+# ---- Transcription engines --------------------------------------------------
+openai-whisper==20250625
+faster-whisper==1.0.3
+ctranslate2==4.7.2              # faster-whisper backend
+whisperx==3.1.1                 # needs the in-repo whisperx_patch.py (see WHISPER_ENGINES_COMPATIBILITY.md)
+vosk==0.3.45
+sherpa-onnx==1.13.2             # also powers the FunASR (SenseVoice/Paraformer) + sherpa-extra + offline-diarization paths
+onnxruntime==1.26.0             # sherpa-onnx runtime
+pywhispercpp==1.5.0             # whisper.cpp (ggml)
+
+# ---- Model downloads --------------------------------------------------------
+huggingface-hub                 # faster-whisper/whisperx/whisper.cpp snapshot + ggml fetch
+
+# ---- AI providers / RAG -----------------------------------------------------
+requests==2.33.1                # ai_client.py + embeddings (OpenAI-compatible, Gemini, local)
+chromadb==1.5.9                 # semantic RAG store
+pydantic==2.13.4                # chromadb dep (was missing on this machine — must ship)
+tenacity==9.1.4                 # chromadb dep
+python-dotenv==1.2.2            # chromadb dep
+sentence-transformers==5.6.0    # DEFAULT RAG embedding backend: a local chat server
+                                #  (llama.cpp/LM Studio) cannot serve /v1/embeddings, so the
+                                #  offline model is what makes "Add to knowledge base" work
+                                #  out of the box. Model itself is fetched on first use.
+scipy==1.17.1                   # openai_whisper_engine reads WAV via scipy.io.wavfile
+
+# ---- Media ingestion --------------------------------------------------------
+yt-dlp[default]==2026.6.9       # URL video + matching EJS challenge scripts
+
+# ---- Exports ----------------------------------------------------------------
+reportlab==4.2.5                # PDF export (Cyrillic font registration)
+python-docx==1.1.2              # DOCX export
+
+# ---- Diagnostics ------------------------------------------------------------
+psutil==7.2.2                   # System tab (CPU/RAM); GPU via nvidia-smi if present
+
+# ---- Recording --------------------------------------------------------------
+soundcard==0.4.6                # OPTIONAL: system-audio (WASAPI loopback) capture, so an
+                                #  online meeting records the other participants too and not
+                                #  just the microphone. Pure Python over the already-present
+                                #  cffi/numpy. Lazy-imported: without it the recorder stays
+                                #  mic-only and says so — nothing else changes.
+
+# =============================================================================
+# OPTIONAL — features degrade gracefully if these are absent (lazy-imported):
+#
+#   pyannote.audio==3.1.1        # ONLY for the gated 'pyannote' diarization backend.
+#                                #  Default diarization is offline sherpa-onnx (ungated,
+#                                #  no HF token) — most users never need this.
+#   openai                       # ONLY for the 'openai' RAG embedding backend (lazy import
+#                                #  in embeddings.py). The default offline backend needs it not.
+#
+# NON-PACKAGE ASSETS (not pip-installable):
+#   ffmpeg           — bundled binary, located via paths.py (audio extraction).
+#   engine models    — downloaded on demand into resources/<engine>_models/ via
+#                      backend/models_cli.py (whisper/faster/whisperx/vosk/sherpa/
+#                      whisper.cpp/funasr) + offline diarization models.
+#   embedding model  — sentence-transformers pulls the multilingual MiniLM on first use.
+#   local AI         — OPTIONAL built-in LLM: backend/local_ai.py downloads the current
+#                      llama.cpp Windows build + a curated GGUF into resources/local_ai/
+#                      on demand. Deliberately NOT part of any build variant (several GB).
+# =============================================================================

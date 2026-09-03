@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+/* Dark mode is driven by <body data-theme="dark"> (toggled in i18n.js).
+   Match BOTH the element that carries the attribute (e.g. <body> itself) AND
+   its descendants — otherwise dark: utilities on <body> never apply and the
+   page background stays light while inner elements go dark. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Scan the HTML and hand-written JS templates for utility classes. */
+@source "../*.html";
+@source "../js/*.js";
+
+@theme {
+  --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Oxygen,
+    Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+
+  /* Brand (indigo/violet) */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-slate-100 text-slate-800 antialiased;
+    @apply dark:bg-slate-950 dark:text-slate-100;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-slate-300 dark:bg-slate-700;
+  }
+}
+
+@layer components {
+  /* Surfaces (card base is shared with the modal panel via the selector list) */
+  .card,
+  .modal-panel {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
+    @apply dark:border-slate-800 dark:bg-slate-900;
+  }
+  .section-title {
+    @apply text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400;
+  }
+
+  /* Buttons — shared base on the whole variant list, then per-variant colours */
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800;
+  }
+  .btn-secondary {
+    @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+    @apply dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700;
+  }
+  .btn-ghost {
+    @apply text-slate-600 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:bg-slate-800;
+  }
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700;
+  }
+  .btn-chip {
+    @apply inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-brand-400 hover:text-brand-600;
+    @apply dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-brand-500;
+  }
+  .icon-btn {
+    @apply inline-flex h-9 min-w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-600 transition hover:bg-slate-50;
+    @apply dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700;
+  }
+
+  /* Form controls */
+  .field {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none transition;
+    @apply placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30;
+    @apply dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500;
+  }
+  .field-label {
+    @apply mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300;
+  }
+
+  /* Badges / statuses — shared base on the variant list */
+  .badge-uploaded,
+  .badge-processing,
+  .badge-completed,
+  .badge-cancelled,
+  .badge-failed {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .badge-uploaded {
+    @apply bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300;
+  }
+  .badge-processing {
+    @apply bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300;
+  }
+  /* A run the user stopped is not a failure - neutral, not red. */
+  .badge-cancelled {
+    @apply bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200;
+  }
+  .badge-completed {
+    @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300;
+  }
+  .badge-failed {
+    @apply bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300;
+  }
+
+  /* Progress */
+  .progress-track {
+    @apply h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800;
+  }
+  .progress-value {
+    @apply h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400 transition-all duration-500;
+  }
+
+  /* Modal */
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-sm sm:p-8;
+  }
+  .modal-panel {
+    @apply my-auto w-full max-w-2xl overflow-hidden;
+  }
+  .modal-header {
+    @apply flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800;
+  }
+  .modal-body {
+    @apply max-h-[70vh] overflow-y-auto px-6 py-5;
+  }
+}

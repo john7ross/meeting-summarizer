@@ -1,0 +1,41 @@
+# Python dependencies for Meeting Summarizer
+
+# Core transcription engines (compatible versions)
+openai-whisper>=20231117
+faster-whisper==1.0.3
+whisperx==3.1.1
+vosk>=0.3.45
+
+# PyTorch 2.6+ is required by current Transformers for safe torch.load.
+# Install the matched Windows CUDA 12.4 stack from:
+# https://download.pytorch.org/whl/cu124
+torch==2.6.0+cu124
+torchaudio==2.6.0+cu124
+torchvision==0.21.0+cu124
+
+# NumPy (must be <2.0 for pyannote.audio 3.1.1)
+numpy<2.0
+
+# PyAnnote (for WhisperX speaker diarization)
+pyannote.audio==3.1.1
+
+# PDF/Document export
+# weasyprint and beautifulsoup4 used to sit here: only the Electron-era exporters
+# imported them, nothing in the port does, and the installer never installed them.
+reportlab>=4.0.0
+python-docx>=1.0.0
+
+# Utilities
+requests>=2.31.0
+Pillow>=9.1.0
+
+# Optional: only needed for the 'openai' RAG embedding backend (default is 'local').
+# embeddings.py imports it lazily and raises a clear error when it is absent.
+# openai>=1.0.0
+
+# Video download by URL (Feature 2: YouTube / file server → transcript/summary)
+yt-dlp[default]>=2026.6.9
+
+# Note: WhisperX 3.1.1 needs compatibility fixes for faster-whisper 1.0.3 and
+# huggingface-hub 1.x. They are applied at runtime by backend/whisperx_patch.py —
+# nothing to patch by hand. See WHISPER_ENGINES_COMPATIBILITY.md for details.

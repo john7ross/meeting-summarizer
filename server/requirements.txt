@@ -1,0 +1,30 @@
+# Server (web layer) dependencies — installed into the SERVER's own light venv.
+# NOTE: this venv does NOT need torch or the transcription engines. The server
+# runs the heavy processing by invoking the embedded runtime
+# (backend/python/python.exe) as a subprocess (see processing/worker.py).
+
+# FastAPI and server
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+python-multipart==0.0.9  # required by FastAPI for multipart uploads (never imported directly)
+
+# Database — SQLite (zero external DB server)
+sqlalchemy==2.0.35
+aiosqlite==0.20.0        # async SQLite driver
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib==1.7.4
+bcrypt==4.0.1            # passlib 1.7.4 is incompatible with bcrypt>=4.1 (backend-detect crash)
+
+# Validation
+pydantic==2.9.0
+email-validator==2.2.0   # required by pydantic's EmailStr (schemas.UserRegister.email)
+
+# Exports (the server runs the desktop Qt-free exporter in-process; pdf/docx need these)
+reportlab==4.2.5
+python-docx==1.1.2
+
+# Removed 2026-07-29 (release audit): httpx, pydantic-settings and python-dotenv were
+# pinned but imported nowhere in the repo and referenced by no dynamic loader. Anything
+# that genuinely needs them as a transitive dependency still gets them from pip.

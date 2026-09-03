@@ -1,0 +1,14 @@
+{
+  "name": "meeting-summarizer-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web cabinet UI for Meeting Summarizer (Tailwind CSS, compiled to a static stylesheet — no runtime deps).",
+  "scripts": {
+    "build:css": "tailwindcss -i ./css/tailwind.src.css -o ./css/app.css --minify",
+    "watch:css": "tailwindcss -i ./css/tailwind.src.css -o ./css/app.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.0",
+    "tailwindcss": "^4.1.0"
+  }
+}

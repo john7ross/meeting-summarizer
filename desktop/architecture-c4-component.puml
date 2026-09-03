@@ -1,0 +1,109 @@
+@startuml meeting-summarizer-c4-component
+' C4 component diagram. Uses PlantUML's bundled C4 standard library.
+!include <C4/C4_Component>
+
+title Meeting Summarizer - C4 component view
+LAYOUT_TOP_DOWN()
+
+Person(local_user, "Local user", "Processes meetings on a Windows workstation")
+Person(web_user, "Web user", "Uses the authenticated browser cabinet")
+Person_Ext(agent, "Local AI agent", "Claude Code / Codex / Gemini CLI / Hermes")
+
+System_Boundary(ms, "Meeting Summarizer") {
+
+  Container_Boundary(desk, "Desktop client (PySide6, desktop/)") {
+    Component(dui, "MainWindow + dialogs", "PySide6 UI", "File/URL intake, queue table, selected-job status projection, versions, scoped regenerate (summary / analysis / both), settings, analysis, RAG, processing history and diagnostics")
+    Component(capture, "Recorder + Trim", "PySide6 + QtMultimedia + ffmpeg", "Mic capture and optional one-file-per-meeting segmentation")
+    Component(dqueue, "PipelineQueue + JobRunner", "Qt core", "Automatic enqueue, pending deque, active runners by history id, per-id cancel, configurable concurrency")
+    Component(dstate, "HistoryStore + RunHistoryStore + config + atomic_io", "JSON state services", "Locked read-modify-write, fsync and atomic replace for the meeting archive, the run journal and settings")
+    Component(dadapters, "Qt-free adapters", "Python", "CLI argv, exports, Obsidian, Google Sheets, templates, speakers, search and media")
+  }
+
+  Container_Boundary(web, "Web cabinet (FastAPI, server/)") {
+    Component(webui, "Browser UI", "Static Tailwind + JavaScript", "Login, meetings, settings, versions, queue, live progress, search, statistics, MediaRecorder mic capture, waveform trimming, Obsidian export, knowledge-base library/stats/prune, prompt-template editing and an admin-only Administration panel")
+    Component(api, "Authenticated API", "FastAPI", "Ownership filters, bounded upload, URL intake guard, exports, Obsidian notes, WebSocket authorization and admin-gated /api/admin")
+    Component(wqueue, "ProcessingQueue", "asyncio", "1-4 workers, queued/processing dedupe, safe live resize")
+    Component(wworker, "ProcessingWorker", "asyncio subprocess orchestration", "Shared ASR/AI pipeline, regenerate and per-feature analysis")
+    Component(wdb, "Auth + persistence", "SQLAlchemy + JWT", "Users, meetings, per-user settings, installation-wide server_settings, logs and artifact versions")
+  }
+
+  Container_Boundary(be, "Shared processing backend (backend/)") {
+    Component(proc, "processor.py", "CLI", "ffmpeg audio extraction, registry-selected ASR, sherpa/Pyannote diarization")
+    Component(ai, "ai_client.py", "CLI", "Local/cloud/agent transports, whole-transcript default, optional map-reduce")
+    Component(url, "url_download.py", "CLI", "yt-dlp and direct HTTP media download")
+    Component(models, "models_cli.py + download_model.py", "CLI", "Resolve, download, check-update and install ASR models (shared, admin-triggered)")
+    Component(rag, "rag.py + embeddings.py", "CLI", "UTF-8 JSON contract, Chroma indexing/search and embedding providers")
+    Component(ragcatalog, "rag_catalogs.py", "Python module", "Isolated/shared resolver, discovery and cross-process write lock")
+    Component(gpu, "gpu_handoff.py", "Python module", "Stop and restore a local LLM around VRAM-heavy ASR")
+    Component(localai, "local_ai.py", "CLI", "On-demand llama.cpp and curated GGUF, normally on port 8081")
+    Component(watchdog, "local_ai_watchdog.py", "CLI", "Restart the local model after a crash or reboot, stand down while the hand-off lock is held")
+    Component(mcp, "mcp_server.py", "MCP stdio", "Desktop archive reads plus literal and semantic search tools")
+  }
+
+  ContainerDb(dfiles, "Desktop files", "JSON + filesystem", "settings, meeting archive (history.json), run journal (processing_history.json) and transcripts/<sanitized file name>")
+  ContainerDb(wfiles, "Web files", "Filesystem", "uploads and transcripts/<numeric meeting id>")
+  ContainerDb(vectors, "Semantic stores", "ChromaDB", "Isolated desktop/user roots plus capability-keyed rag_shared catalogs")
+}
+
+System_Ext(ai_endpoints, "AI endpoints", "Local OpenAI-compatible servers and cloud APIs")
+System_Ext(media_sources, "Media sources", "YouTube, public HTTP(S) file servers")
+System_Ext(model_sources, "Model sources", "Hugging Face, k2-fsa, alphacephei")
+System_Ext(llama_sources, "llama.cpp + GGUF sources", "GitHub releases and model hosts")
+System_Ext(sheets, "Google Sheets", "Apps Script webhook")
+System_Ext(obsidian, "Obsidian vault", "Local Markdown files")
+
+Rel(local_user, dui, "Uses")
+Rel(local_user, capture, "Records or selects segments")
+Rel(web_user, webui, "Uses over HTTPS")
+Rel(webui, api, "REST + authenticated WebSocket")
+
+Rel(capture, dui, "Returns original file or segments")
+Rel(dui, dstate, "Read/write settings and selected job")
+Rel(dui, dqueue, "Enqueue each accepted file automatically")
+Rel(dqueue, dstate, "Persist id-keyed status and versions")
+Rel(dqueue, dadapters, "Build and run each stage")
+Rel(dqueue, gpu, "Acquire/release VRAM")
+Rel(gpu, localai, "Stop and restart the built-in model")
+Rel(watchdog, gpu, "Read the hand-off lock")
+Rel(watchdog, localai, "Restart when down")
+Rel(dstate, dfiles, "Atomic JSON and artifact paths")
+Rel(dadapters, dfiles, "Read/write artifacts and exports")
+
+Rel(webui, api, "Commands and status")
+Rel(api, wdb, "Authenticate and enforce ownership")
+Rel(api, wfiles, "Stream bounded uploads and validated deletion")
+Rel(api, wqueue, "Enqueue meeting id")
+Rel(wqueue, wworker, "Start when a worker slot is free")
+Rel(wworker, wdb, "Persist status, logs and versions")
+Rel(wworker, wfiles, "Read upload; write meeting artifacts")
+
+Rel(dadapters, proc, "Subprocess")
+Rel(dadapters, ai, "Subprocess")
+Rel(dui, url, "Download before enqueue")
+Rel(wworker, proc, "Subprocess")
+Rel(wworker, ai, "Subprocess")
+Rel(wworker, url, "Download URL source")
+Rel(api, rag, "Per-user index/search")
+Rel(api, ragcatalog, "Resolve isolated or shared catalog")
+
+Rel(ai, ai_endpoints, "Chat completion")
+Rel(ai, agent, "Prompt/text via stdin or files")
+Rel(url, media_sources, "Download")
+Rel(models, model_sources, "Download/update")
+Rel(proc, model_sources, "Load gated Pyannote model when selected")
+Rel(localai, llama_sources, "Resolve and download")
+Rel(localai, ai_endpoints, "Serve OpenAI-compatible API")
+Rel(rag, vectors, "Read/write selected namespace")
+Rel(rag, ragcatalog, "Serialize mutating operations")
+
+Rel(dadapters, sheets, "Best-effort append")
+Rel(dadapters, obsidian, "Best-effort Markdown export")
+Rel(api, obsidian, "Writes the selected version via the same Qt-free module")
+Rel(wworker, sheets, "Best-effort append via adapter")
+
+Rel(mcp, dfiles, "Read desktop history and artifacts")
+Rel(mcp, ragcatalog, "Discover every local catalog")
+Rel(mcp, vectors, "Aggregate semantic search; label and deduplicate")
+Rel(agent, mcp, "MCP list/get/search tools")
+
+@enduml
